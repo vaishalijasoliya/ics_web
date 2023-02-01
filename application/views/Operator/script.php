@@ -1007,10 +1007,18 @@
             dataType: "html"
         });
 
-        console.log('request');
+        //console.log('request');
         request.done(function(msg) {
 
-            console.log(msg)
+            //console.log(msg)
+            var string = "mytest/test/xNoFlowWhenOpenAlarm1";
+            const newstring = string.split('/');
+            var static = '{ "mytest":{"test":{"xOutsideDeadbandAlarm": "FALSE","xUSCriticalAlarm": "FALSE", "xDSCriticalAlarm": "true","xFailedToReachSP": "FALSE","xFMCriticalAlarm": "FALSE","xFMNonCriticalAlarm": "FALSE","xFlowAtClosedAlarm": "FALSE","xNoFlowWhenOpenAlarm1": "TRUE"}}}';
+            var staticdata = JSON.parse(static)
+            for (let index = 0; index < newstring.length; index++) {
+                staticdata = staticdata[newstring[index]]
+            }
+            console.log(staticdata,'newValue');
             var data = JSON.parse(msg)
             var rows = ''
             var count = 1;
@@ -1019,6 +1027,7 @@
             var Allocation = 0;
 
             data.forEach(element => {
+                console.log(element);
                 rows += '<tr  class="' + element.sign + '" ><td>' + count + '</td><td>' + element.wr_number + '</td><td>' + element.serial_number + '</td><td>' + element.meter_name + '</td><td>' + element.flow_rate + '</td><td>' + element.reading + '</td><td>' + element.reading + '&nbsp ML</td><td>' + element.date_of_reading + '</td><td>' + element.channel_name + '</td></tr>';
                 count++;
 

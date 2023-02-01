@@ -225,57 +225,70 @@ class Service extends REST_Controller
   # SEARCH METER BY CLIENT NAME, SERIAL NUMBER, WATER RIGHT NUMBER OR CHANNEL NAME
 
   private function get_live_data_MQTT($meters){
-      $macid = '';
-      $flowRate = 0;
-      $usage = 0;
-      $reading = 0;
-      if(isset($meters['flow_total_reading_topic'])){
-        $matches = array();
-        $t = preg_match('/\/(.*?)\//s', $meters['flow_total_reading_topic'], $matches);
-        $macid = isset($matches[1])?$matches[1]:0;
-        $slashArray = array_reverse(explode("/",$meters['flow_total_reading_topic']));
-        $flowRate = 0;
-
+    $macid = '';
+    $flowRate = 0;
+    $usage = 0;
+    $reading = 0;
+    if(isset($meters['flow_total_reading_topic'])){
+        $slashArray =  (explode("/",$meters['flow_total_reading_topic']));
+        $totalReading = 0;
+        
         if(is_array($slashArray)){
             if(isset($slashArray[0])){
-                $usageString = $slashArray[0];
-
+                $elementName = end($slashArray);
+                $macid = str_replace("/".$elementName, '',$meters['flow_total_reading_topic']);
                 $columns = array('tbl_python_mqtt.*');
                     $wherecol=array(
-                      'macid'=>$macid,
-                      );
+                        'macid'=>$macid,
+                        );
                 $liveDataMQTT=$this->user_model->get_joins('tbl_python_mqtt',$wherecol);
                 //print_r($liveDataMQTT);
                 
                 if(is_array($liveDataMQTT)){
-                  $flowrateMQTT = isset($liveDataMQTT[0]['flowrate'])? (int) ($liveDataMQTT[0]['flowrate']):0;
-                  $scal_flow_rate = isset($meters['flow_rate_scaling'])?(int) $meters['flow_rate_scaling']:0;
-
-                  $flowRate = $flowrateMQTT * $scal_flow_rate;
-                  if($usageString == 'di1'){
-                    $redinngMQTT = isset($liveDataMQTT[0]['di1'])?$liveDataMQTT[0]['di1']:0;
-                    $reading = $redinngMQTT* $meters['flow_total_reading_scaling'];
-                      
-                  }else if($usageString == 'di1'){
-                    $redinngMQTT = isset($liveDataMQTT[0]['di2'])?$liveDataMQTT[0]['di2']:0;
-                    $reading = $redinngMQTT*$meters['flow_total_reading_scaling'];
-                    
-                  }
+                    $flowrateMQTTData = isset($liveDataMQTT[0]['attribute5'])?  ($liveDataMQTT[0]['attribute5']):'';
+                    $decoded_json = json_decode(rtrim(ltrim($flowrateMQTTData, '"'), '"'));
+                    $flowrateMQTT = isset($decoded_json->$elementName)? (float) $decoded_json->$elementName: 0;
+                    $scal_flow_rate_2 = isset($meters['flow_total_reading_scaling'])?(float) $meters['flow_total_reading_scaling']:0;
+                    $reading = $flowrateMQTT* $scal_flow_rate_2;
                 }
-                
-                
             }
         }
+    }
 
-      }
-      $response = array(
-        'macid' => $macid,
-        'flowRate' => $flowRate,
-        'usage' => $usage,
-        'reading' => number_format($reading, 3)
-      );
-      return $response;
-  }
+    if(isset($meters['flow_rate_topic'])){
+        $slashArray =  (explode("/",$meters['flow_rate_topic']));
+        $flowRate = 0;
+        
+        if(is_array($slashArray)){
+            if(isset($slashArray[0])){
+                $elementName = end($slashArray);
+                $macid = str_replace("/".$elementName, '',$meters['flow_rate_topic']);
+                $columns = array('tbl_python_mqtt.*');
+                    $wherecol=array(
+                        'macid'=>$macid,
+                        );
+                $liveDataMQTT=$this->user_model->get_joins('tbl_python_mqtt',$wherecol);
+                //print_r($liveDataMQTT);
+                
+                if(is_array($liveDataMQTT)){
+                    $flowrateMQTTData = isset($liveDataMQTT[0]['attribute5'])?  ($liveDataMQTT[0]['attribute5']):'';
+                    $decoded_json = json_decode(rtrim(ltrim($flowrateMQTTData, '"'), '"'));
+                    $flowrateMQTT =  isset($decoded_json->$elementName)? (int) $decoded_json->$elementName:0;
+                    $scal_flow_rate = isset($meters['flow_rate_scaling'])?(float) $meters['flow_rate_scaling']:0;
+                    $flowRate = $flowrateMQTT* $scal_flow_rate;
+                }
+            }
+        }
+    }
+    
+    $response = array(
+      'macid' => $meters['serial_number'],
+      'flowRate' => $flowRate,
+      'usage' => $usage,
+      'reading' => (number_format((float)$reading, 2, '.', '')),
+    );
+    return $response;
+}
   public function search_meter_connections_post()
   {
     $operatorid = $this->input->post('operatorid') ? $this->input->post('operatorid') : '';
